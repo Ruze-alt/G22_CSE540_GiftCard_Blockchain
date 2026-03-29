@@ -28,7 +28,7 @@ Records the full lifecycle of each gift card: **creation** (issuer), **activatio
     curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/master/scripts/bootstrap.sh | bash -s
     ```
 
-## How To Deploy / Use (WIP)
+## How To Deploy (WIP)
 - **Build Chaincode**
     ```bash
     cd chaincode
@@ -43,7 +43,84 @@ Records the full lifecycle of each gift card: **creation** (issuer), **activatio
     ./network.sh createChannel
     ```
 
-- **Chaincode Functions**
+- **Package Smart Contract (Chaincode)**
+    ```bash
+    # Set Environment Path Variables
+    export PATH=${PWD}/../bin:$PATH
+    export FABRIC_CFG_PATH=${PWD}/../config/
+
+    # Package Chaincode
+    peer lifecycle chaincode package giftCard.tar.gz \
+    --path <path/to/chaincode> \
+    --lang golang \
+    --label giftCard
+    ```
+
+- **Install Chaincode Package**
+    ```bash
+    # Set Environment Variables for Org1
+    export CORE_PEER_TLS_ENABLED=true
+    export CORE_PEER_LOCALMSPID="Org1MSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+    export CORE_PEER_ADDRESS=localhost:7051
+
+    # Install The Chaincode
+    peer lifecycle chaincode install giftCard.tar.gz
+
+    # Set Environment Variables for Org2
+    export CORE_PEER_LOCALMSPID="Org2MSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
+    export CORE_PEER_ADDRESS=localhost:9051
+
+    # Install The Chaincode
+    peer lifecycle chaincode install giftCard.tar.gz
+    ```
+
+- **Approve Chaincode Definition**
+    ```bash
+    # Run Command And Copy Package ID
+    peer lifecycle chaincode queryinstalled
+
+    # Export Package ID
+    export CC_PACKAGE_ID= # Your Copied Package ID
+
+    # Approve Chaincode Definition As Org2
+    peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name giftCard --version 1.0 --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
+
+    # Set Environment Variables To Operate As The Org1 Admin
+    export CORE_PEER_LOCALMSPID="Org1MSP"
+    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+    export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+    export CORE_PEER_ADDRESS=localhost:7051
+
+    # Approve Chaincode Definition As Org1
+    peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name giftCard --version 1.0 --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
+    ```
+
+- **Commit Chaincode Definition To Channel**
+    ```bash
+    # Commit Chaincode
+    peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name giftCard --version 1.0 --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
+    ```
+
+- **Invoking And Querying The Chaincode**
+    ```bash
+    # General Syntax for Invoking a Function (Use For Setter Type Functions)
+    peer chaincode invoke -o localhost:7050 \
+    --ordererTLSHostnameOverride orderer.example.com \
+    --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+    -C mychannel -n giftCard \
+    --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+    --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+    -c '{"function":"YourFunctionName","Args":["Arg1", "Arg2"]}'
+
+    # General Syntax for Querying (Use For Getter Type Functions)
+    peer chaincode query -C mychannel -n giftCard -c '{"Args":["FunctionName", "Arg1", "Arg2"]}'
+    ```
+
+- **Chaincode Functions To Use**
     ```bash
     CreateGiftCard(cardId, ownerId, balance) # Issuer Creates Card
     ActivateGiftCard(cardId) # Retailer Activates
