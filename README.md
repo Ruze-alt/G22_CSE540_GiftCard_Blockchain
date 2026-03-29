@@ -105,9 +105,9 @@ Records the full lifecycle of each gift card: **creation** (issuer), **activatio
     peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name giftCard --version 1.0 --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
     ```
 
-- **Invoking And Querying The Chaincode**
+- **Invoking The Chaincode**
     ```bash
-    # General Syntax for Invoking a Function (Use For Setter Type Functions)
+    # General Syntax for Invoking a Function
     peer chaincode invoke -o localhost:7050 \
     --ordererTLSHostnameOverride orderer.example.com \
     --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
@@ -115,15 +115,24 @@ Records the full lifecycle of each gift card: **creation** (issuer), **activatio
     --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
     --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
     -c '{"function":"YourFunctionName","Args":["Arg1", "Arg2"]}'
+    ```
 
-    # General Syntax for Querying (Use For Getter Type Functions)
+- **Invoke Functions To Use**
+    - `InitLedger`
+    - `CreateGiftCard`
+    - `TransferGiftCard`
+    - `ActivateGiftCard`
+    - `RedeemGiftCard`
+    - `SuspendGiftCard`
+    - `ReactivateGiftCard`
+
+- **Querying The Chaincode**
+    ```bash
+    # General Syntax for Querying
     peer chaincode query -C mychannel -n giftCard -c '{"Args":["FunctionName", "Arg1", "Arg2"]}'
     ```
 
-- **Chaincode Functions To Use**
-    ```bash
-    CreateGiftCard(cardId, ownerId, balance) # Issuer Creates Card
-    ActivateGiftCard(cardId) # Retailer Activates
-    RedeemGiftCard(cardId, amount) # Customer Redeems
-    GetGiftCardHistory(cardId) # Full History
-    ```
+- **Query Functions To Use**
+    - `GetGiftCard`
+    - `GetCurrentBalance`
+    - `GetGiftCardHistory`
