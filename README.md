@@ -29,7 +29,7 @@ Records the full lifecycle of each gift card: **creation** (issuer), **activatio
     ```
 
 ## How To Deploy (WIP)
-- **Build Chaincode**
+- **Build Go Files**
     ```bash
     cd chaincode
     go mod tidy
