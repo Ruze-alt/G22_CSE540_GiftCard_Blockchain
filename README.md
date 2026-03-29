@@ -38,6 +38,7 @@ Records the full lifecycle of each gift card: **creation** (issuer), **activatio
 - **Start Test Network**
     ```bash
     cd ~/fabric-dev/fabric-samples/test-network
+    ./network.sh down # Remove anything previously generated
     ./network.sh up
     ./network.sh createChannel
     ```
