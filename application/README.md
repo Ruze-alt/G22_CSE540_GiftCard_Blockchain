@@ -1,1 +1,1 @@
-# Application + UI (WIP)
+# Application + UI; Will Need A Backend and Frontend (WIP) 
