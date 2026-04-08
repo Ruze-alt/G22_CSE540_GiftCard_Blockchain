@@ -1,5 +1,6 @@
 package main
 
+// Types and constants used across the chaincode for gift card status, participant roles, and event types
 type GiftCardStatus string
 type ParticipantRole string
 type EventType string
