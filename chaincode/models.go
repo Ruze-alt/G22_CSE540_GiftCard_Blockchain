@@ -6,13 +6,13 @@ type GiftCard struct {
 	OwnerMSP        string         `json:"ownerMsp"`
 	IssuerID        string         `json:"issuerId"`
 	IssuerMSP       string         `json:"issuerMsp"`
-	RetailerID      string         `json:"retailerId"`
-	RetailerMSP     string         `json:"retailerMsp"`
+	RetailerID      string         `json:"retailerId,omitempty"`
+	RetailerMSP     string         `json:"retailerMsp,omitempty"`
 	Balance         float64        `json:"balance"`
 	OriginalBalance float64        `json:"originalBalance"`
 	Status          GiftCardStatus `json:"status"`
 	CreatedAt       string         `json:"createdAt"`
-	ActivatedAt     string         `json:"activatedAt"`
+	ActivatedAt     string         `json:"activatedAt,omitempty"`
 	LastUpdatedAt   string         `json:"lastUpdatedAt"`
 }
 

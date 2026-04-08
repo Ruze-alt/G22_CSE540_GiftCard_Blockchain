@@ -10,11 +10,6 @@ type GiftCardSmartContract struct {
 	contractapi.Contract
 }
 
-// InitLedger may be used for demo purposes
-func (gc *GiftCardSmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
-	return nil
-}
-
 // Helper function to check if a gift card exists in the ledger
 func (gc *GiftCardSmartContract) GiftCardExists(
 	ctx contractapi.TransactionContextInterface,
@@ -31,62 +26,53 @@ func (gc *GiftCardSmartContract) GiftCardExists(
 func (gc *GiftCardSmartContract) CreateGiftCard(
 	ctx contractapi.TransactionContextInterface,
 	cardID string,
-	ownerID string,
-	retailerID string,
+	issuerID string,
 	balance float64,
-) (*GiftCard, error) {
-	err := requireMSP(ctx, []string{Org1MSP})
+) (string, error) {
+	err := requireMSP(ctx, Org1MSP)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = validateCardID(cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	err = validateParticipantID(ownerID, "owner ID")
+	err = validateParticipantID(issuerID, "issuer ID")
 	if err != nil {
-		return nil, err
-	}
-
-	err = validateParticipantID(retailerID, "retailer ID")
-	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = validateAmount(balance)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	exists, err := gc.GiftCardExists(ctx, cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-
 	if exists {
-		return nil, fmt.Errorf("gift card %s already exists", cardID)
+		return "", fmt.Errorf("gift card %s already exists", cardID)
 	}
 
 	info, err := getClientIdentity(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	now, err := getTimestamp(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	card := &GiftCard{
 		CardID:          cardID,
-		OwnerID:         ownerID,
-		OwnerMSP:        Org2MSP,
-		IssuerID:        info.ClientID,
+		OwnerID:         issuerID,
+		OwnerMSP:        info.MSPID,
+		IssuerID:        issuerID,
 		IssuerMSP:       info.MSPID,
-		RetailerID:      retailerID,
-		RetailerMSP:     Org1MSP,
 		Balance:         balance,
 		OriginalBalance: balance,
 		Status:          StatusCreated,
@@ -96,7 +82,7 @@ func (gc *GiftCardSmartContract) CreateGiftCard(
 
 	err = writeGiftCardState(ctx, card)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = recordEvent(
@@ -105,14 +91,14 @@ func (gc *GiftCardSmartContract) CreateGiftCard(
 		EventTypeCardCreated,
 		info.ClientID,
 		info.MSPID,
-		getActorRoleByMSP(info.MSPID),
+		string(RoleIssuer),
 		"gift card created by issuer/admin",
 	)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return card, nil
+	return fmt.Sprintf("Gift card %s created successfully", cardID), nil
 }
 
 // Function TransferGiftCard allows the current owner or an admin to transfer the gift card to a new owner
@@ -120,34 +106,33 @@ func (gc *GiftCardSmartContract) TransferGiftCard(
 	ctx contractapi.TransactionContextInterface,
 	cardID string,
 	newOwnerID string,
-) (*GiftCard, error) {
-	var err error
-	err = validateCardID(cardID)
+) (string, error) {
+	err := requireMSP(ctx, Org1MSP)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
+
+	if err := validateCardID(cardID); err != nil {
+		return "", err
+	}
+
 	err = validateParticipantID(newOwnerID, "new owner ID")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	card, err := readGiftCardState(ctx, cardID)
 	if err != nil {
-		return nil, err
+		return "", err
+	}
+
+	if card.Status != StatusActivated {
+		return "", fmt.Errorf("gift card must be activated before transfer to customer")
 	}
 
 	info, err := getClientIdentity(ctx)
 	if err != nil {
-		return nil, err
-	}
-
-	if info.MSPID != Org1MSP && !(info.MSPID == card.OwnerMSP && info.ClientID == card.OwnerID) {
-		return nil, fmt.Errorf("caller is not authorized to transfer this gift card")
-	}
-
-	err = assertValidStateTransition(card.Status, StatusTransferred)
-	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	card.OwnerID = newOwnerID
@@ -156,13 +141,13 @@ func (gc *GiftCardSmartContract) TransferGiftCard(
 
 	now, err := getTimestamp(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	card.LastUpdatedAt = now
 
 	err = writeGiftCardState(ctx, card)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = recordEvent(
@@ -171,57 +156,60 @@ func (gc *GiftCardSmartContract) TransferGiftCard(
 		EventTypeCardTransferred,
 		info.ClientID,
 		info.MSPID,
-		getActorRoleByMSP(info.MSPID),
-		fmt.Sprintf("gift card transferred to new owner %s", newOwnerID),
+		string(RoleRetailer),
+		fmt.Sprintf("gift card transferred to customer %s", newOwnerID),
 	)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return card, nil
+	return fmt.Sprintf("Gift card %s transferred to %s", cardID, newOwnerID), nil
 }
 
 // Function ActivateGiftCard allows a retailer or admin to activate a created gift card
 func (gc *GiftCardSmartContract) ActivateGiftCard(
 	ctx contractapi.TransactionContextInterface,
 	cardID string,
-) (*GiftCard, error) {
-	var err error
-	err = requireMSP(ctx, []string{Org1MSP})
+) (string, error) {
+	err := requireMSP(ctx, Org1MSP)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = validateCardID(cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	card, err := readGiftCardState(ctx, cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = updateCardStatus(card, StatusActivated)
 	if err != nil {
-		return nil, err
+		return "", err
+	}
+
+	info, err := getClientIdentity(ctx)
+	if err != nil {
+		return "", err
 	}
 
 	now, err := getTimestamp(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
+
+	card.RetailerID = info.ClientID
+	card.RetailerMSP = info.MSPID
 	card.ActivatedAt = now
 	card.LastUpdatedAt = now
-
-	info, err := getClientIdentity(ctx)
-	if err != nil {
-		return nil, err
-	}
+	card.OwnerID = "retailer1" // For demo
 
 	err = writeGiftCardState(ctx, card)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = recordEvent(
@@ -234,10 +222,10 @@ func (gc *GiftCardSmartContract) ActivateGiftCard(
 		"gift card activated by retailer/admin",
 	)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return card, nil
+	return fmt.Sprintf("Gift card %s activated successfully", cardID), nil
 }
 
 // Function RedeemGiftCard allows the current owner to redeem a gift card
@@ -245,41 +233,41 @@ func (gc *GiftCardSmartContract) RedeemGiftCard(
 	ctx contractapi.TransactionContextInterface,
 	cardID string,
 	amount float64,
-) (*GiftCard, error) {
+) (string, error) {
 	var err error
 	err = validateCardID(cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	err = validateAmount(amount)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	card, err := readGiftCardState(ctx, cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	info, err := getClientIdentity(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	if info.MSPID != Org1MSP && !(info.MSPID == card.OwnerMSP && info.ClientID == card.OwnerID) {
-		return nil, fmt.Errorf("caller is not authorized to redeem this gift card")
+	if info.MSPID != Org1MSP && info.MSPID != card.OwnerMSP {
+		return "", fmt.Errorf("caller is not authorized to redeem this gift card")
 	}
 
 	if card.Status == StatusSuspended {
-		return nil, fmt.Errorf("gift card is suspended")
+		return "", fmt.Errorf("gift card is suspended")
 	}
 
-	if card.Status != StatusActivated && card.Status != StatusPartiallyRedeemed {
-		return nil, fmt.Errorf("gift card is not in a redeemable state")
+	if card.Status != StatusActivated && card.Status != StatusTransferred && card.Status != StatusPartiallyRedeemed {
+		return "", fmt.Errorf("gift card is not in a redeemable state")
 	}
 
 	if !cardHasSufficientBalance(card, amount) {
-		return nil, fmt.Errorf("insufficient balance")
+		return "", fmt.Errorf("insufficient balance")
 	}
 
 	card.Balance -= amount
@@ -291,13 +279,13 @@ func (gc *GiftCardSmartContract) RedeemGiftCard(
 
 	now, err := getTimestamp(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	card.LastUpdatedAt = now
 
 	err = writeGiftCardState(ctx, card)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = recordEvent(
@@ -310,10 +298,10 @@ func (gc *GiftCardSmartContract) RedeemGiftCard(
 		fmt.Sprintf("gift card redeemed for amount %.2f", amount),
 	)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return card, nil
+	return fmt.Sprintf("Gift card %s redeemed for %.2f, new balance: %.2f", cardID, amount, card.Balance), nil
 }
 
 // Function SuspendGiftCard allows an admin to suspend a gift card
@@ -321,42 +309,41 @@ func (gc *GiftCardSmartContract) SuspendGiftCard(
 	ctx contractapi.TransactionContextInterface,
 	cardID string,
 	reason string,
-) (*GiftCard, error) {
-	var err error
-	err = requireMSP(ctx, []string{Org1MSP})
+) (string, error) {
+	err := requireMSP(ctx, Org1MSP)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = validateCardID(cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	card, err := readGiftCardState(ctx, cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = updateCardStatus(card, StatusSuspended)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	now, err := getTimestamp(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	card.LastUpdatedAt = now
 
 	info, err := getClientIdentity(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = writeGiftCardState(ctx, card)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = recordEvent(
@@ -369,53 +356,52 @@ func (gc *GiftCardSmartContract) SuspendGiftCard(
 		reason,
 	)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return card, nil
+	return fmt.Sprintf("Gift card %s suspended: %s", cardID, reason), nil
 }
 
 // Function ReactivateGiftCard allows an admin to reactivate a suspended gift card
 func (gc *GiftCardSmartContract) ReactivateGiftCard(
 	ctx contractapi.TransactionContextInterface,
 	cardID string,
-) (*GiftCard, error) {
-	var err error
-	err = requireMSP(ctx, []string{Org1MSP})
+) (string, error) {
+	err := requireMSP(ctx, Org1MSP)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = validateCardID(cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	card, err := readGiftCardState(ctx, cardID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if card.Status != StatusSuspended {
-		return nil, fmt.Errorf("gift card is not suspended")
+		return "", fmt.Errorf("gift card is not suspended")
 	}
 
 	card.Status = StatusActivated
 
 	now, err := getTimestamp(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	card.LastUpdatedAt = now
 
 	info, err := getClientIdentity(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = writeGiftCardState(ctx, card)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = recordEvent(
@@ -428,10 +414,10 @@ func (gc *GiftCardSmartContract) ReactivateGiftCard(
 		"gift card reactivated by admin",
 	)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return card, nil
+	return fmt.Sprintf("Gift card %s reactivated", cardID), nil
 }
 
 // Function GetGiftCard allows the owner or an admin to view gift card details
@@ -439,8 +425,7 @@ func (gc *GiftCardSmartContract) GetGiftCard(
 	ctx contractapi.TransactionContextInterface,
 	cardID string,
 ) (*GiftCard, error) {
-	var err error
-	err = validateCardID(cardID)
+	err := validateCardID(cardID)
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +440,7 @@ func (gc *GiftCardSmartContract) GetGiftCard(
 		return nil, err
 	}
 
-	if info.MSPID != Org1MSP && !(info.MSPID == card.OwnerMSP && info.ClientID == card.OwnerID) {
+	if info.MSPID != Org1MSP && info.MSPID != card.OwnerMSP {
 		return nil, fmt.Errorf("caller is not authorized to view this gift card")
 	}
 
@@ -495,7 +480,7 @@ func (gc *GiftCardSmartContract) GetGiftCardHistory(
 		return nil, err
 	}
 
-	if info.MSPID != Org1MSP && !(info.MSPID == card.OwnerMSP && info.ClientID == card.OwnerID) {
+	if info.MSPID != Org1MSP && info.MSPID != card.OwnerMSP {
 		return nil, fmt.Errorf("caller is not authorized to view gift card history")
 	}
 

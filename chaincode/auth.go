@@ -20,9 +20,12 @@ func getClientIdentity(ctx contractapi.TransactionContextInterface) (*ClientIden
 		return nil, fmt.Errorf("failed to get MSP ID: %v", err)
 	}
 
-	role, _, err := cID.GetAttributeValue("role")
+	// Role attribute is optional for MSP only access (FOR DEMO PURPOSES)
+	role, found, err := cID.GetAttributeValue("role")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get role attribute: %v", err)
+		role = ""
+	} else if !found {
+		role = ""
 	}
 
 	return &ClientIdentityInfo{
@@ -33,7 +36,7 @@ func getClientIdentity(ctx contractapi.TransactionContextInterface) (*ClientIden
 }
 
 // Helper function to check if the client belongs to one of the allowed MSPs
-func requireMSP(ctx contractapi.TransactionContextInterface, allowedMSPs []string) error {
+func requireMSP(ctx contractapi.TransactionContextInterface, allowedMSPs ...string) error {
 	info, err := getClientIdentity(ctx)
 	if err != nil {
 		return err
