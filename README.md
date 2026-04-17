@@ -136,3 +136,72 @@ Records the full lifecycle of each gift card: **creation** (issuer), **activatio
     - `GetGiftCard`
     - `GetCurrentBalance`
     - `GetGiftCardHistory`
+
+## Web Application
+
+The project includes a Go REST API server and a single-page browser UI that connects to the Fabric test network. Complete the chaincode deployment steps above before starting the server.
+
+### Additional Dependencies
+- Go 1.22+ (required for `net/http` path parameters)
+- No Node.js required — the frontend is pure HTML/CSS/JavaScript
+
+### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `TEST_NETWORK_PATH` | *(required)* | Absolute path to `fabric-samples/test-network` |
+| `CHANNEL_NAME` | `mychannel` | Fabric channel name |
+| `CHAINCODE_NAME` | `giftCard` | Deployed chaincode name |
+| `PORT` | `8080` | HTTP port for the API server |
+| `FRONTEND_DIR` | auto-detected | Path to `application/frontend/` (override if needed) |
+
+### Starting the API Server
+```bash
+# Ensure the Fabric test network is running and chaincode is deployed first, then:
+export TEST_NETWORK_PATH=~/fabric-dev/fabric-samples/test-network
+
+cd application
+go mod tidy
+go run ./cmd/server/
+```
+
+The server starts on `http://localhost:8080` and serves both the REST API and the frontend UI.
+
+### Opening the Frontend
+
+Navigate to **http://localhost:8080** in your browser. The UI has four tabs:
+
+| Tab | Role | Available Actions |
+|---|---|---|
+| **Issuer** | Org1MSP | Create gift card |
+| **Retailer** | Org1MSP | Activate card, Transfer card |
+| **Customer** | Org2MSP | Redeem card |
+| **Admin** | Org1MSP | Suspend card, Reactivate card |
+
+All tabs share a **Look Up Gift Card** panel that shows the current card status, balance, and full transaction history.
+
+### REST API Endpoints
+
+| Method | Path | Role param | Description |
+|---|---|---|---|
+| `POST` | `/cards` | `issuer` | Create a gift card |
+| `POST` | `/cards/{id}/activate` | `retailer` | Activate a card |
+| `POST` | `/cards/{id}/transfer` | `retailer` | Transfer card to new owner |
+| `POST` | `/cards/{id}/redeem` | `customer` | Redeem an amount from card |
+| `POST` | `/cards/{id}/suspend` | `admin` | Suspend a card |
+| `POST` | `/cards/{id}/reactivate` | `admin` | Reactivate a suspended card |
+| `GET` | `/cards/{id}` | any | Get card details |
+| `GET` | `/cards/{id}/balance` | any | Get current balance |
+| `GET` | `/cards/{id}/history` | any | Get event history |
+
+**Example — create a card:**
+```bash
+curl -X POST http://localhost:8080/cards?role=issuer \
+  -H 'Content-Type: application/json' \
+  -d '{"cardID":"GC001","issuerID":"issuer1","balance":100}'
+```
+
+**Example — look up a card:**
+```bash
+curl http://localhost:8080/cards/GC001?role=issuer
+```
