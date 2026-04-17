@@ -1,29 +1,29 @@
 package models
 
 type GiftCard struct {
-    CardID          string  `json:"cardID"`
-    OwnerID         string  `json:"ownerID"`
-    OwnerMSP        string  `json:"ownerMSP"`
-    IssuerID        string  `json:"issuerID"`
-    IssuerMSP       string  `json:"issuerMSP"`
-    RetailerID      string  `json:"retailerID,omitempty"`
-    RetailerMSP     string  `json:"retailerMSP,omitempty"`
+    CardID          string  `json:"cardId"`
+    OwnerID         string  `json:"ownerId"`
+    OwnerMSP        string  `json:"ownerMsp"`
+    IssuerID        string  `json:"issuerId"`
+    IssuerMSP       string  `json:"issuerMsp"`
+    RetailerID      string  `json:"retailerId"`
+    RetailerMSP     string  `json:"retailerMsp"`
     Balance         float64 `json:"balance"`
     OriginalBalance float64 `json:"originalBalance"`
     Status          string  `json:"status"`
     CreatedAt       string  `json:"createdAt"`
-    ActivatedAt     string  `json:"activatedAt,omitempty"`
+    ActivatedAt     string  `json:"activatedAt"`
     LastUpdatedAt   string  `json:"lastUpdatedAt"`
 }
 
 type GiftCardEvent struct {
-    EventID       string `json:"eventID"`
-    CardID        string `json:"cardID"`
-    EventType     string `json:"eventType"`
-    ActorID       string `json:"actorID"`
-    ActorMSP      string `json:"actorMSP"`
-    ActorRole     string `json:"actorRole"`
-    Description   string `json:"description"`
-    TransactionID string `json:"transactionID"`
-    Timestamp     string `json:"timestamp"`
+    EventID   string `json:"eventId"`
+    CardID    string `json:"cardId"`
+    EventType string `json:"eventType"`
+    ActorID   string `json:"actorId"`
+    ActorMSP  string `json:"actorMsp"`
+    ActorRole string `json:"actorRole"`
+    Details   string `json:"details"`
+    TxID      string `json:"txId"`
+    Timestamp string `json:"timestamp"`
 }
