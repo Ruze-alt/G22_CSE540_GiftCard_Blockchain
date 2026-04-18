@@ -4,13 +4,353 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gift Card Blockchain Tracker</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --card-bg: #ffffff;
+    --border: #e0e4ea;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --text: #1e293b;
+    --muted: #64748b;
+    --radius: 8px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header { background: var(--primary); color: white; padding: 1rem 2rem; }
+  header h1 { font-size: 1.25rem; font-weight: 700; }
+  header p { font-size: 0.85rem; opacity: 0.85; margin-top: 0.2rem; }
+
+  nav { display: flex; gap: 0; border-bottom: 2px solid var(--border); background: white; padding: 0 2rem; }
+  nav button {
+    padding: 0.75rem 1.5rem;
+    border: none; background: none; cursor: pointer;
+    font-size: 0.9rem; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: color 0.15s;
+  }
+  nav button:hover { color: var(--primary); }
+  nav button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+  main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .tab { display: none; flex-direction: column; gap: 1rem; }
+  .tab.active { display: flex; }
+
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow); }
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+
+  .form-row { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; }
+  label { font-size: 0.8rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  input {
+    padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 0.9rem; color: var(--text); width: 100%;
+    transition: border-color 0.15s;
+  }
+  input:focus { outline: none; border-color: var(--primary); }
+
+  button.submit-btn {
+    padding: 0.6rem 1.25rem; background: var(--primary); color: white; border: none;
+    border-radius: var(--radius); font-size: 0.9rem; font-weight: 500; cursor: pointer;
+    transition: background 0.15s;
+  }
+  button.submit-btn:hover { background: var(--primary-hover); }
+  button.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .alert {
+    padding: 0.65rem 0.9rem; border-radius: var(--radius); font-size: 0.85rem; margin-top: 0.5rem;
+    display: none;
+  }
+  .alert.success { background: #dcfce7; color: #166534; display: block; }
+  .alert.error { background: #fee2e2; color: #991b1b; display: block; }
+
+  /* Status badges */
+  .badge {
+    display: inline-block; padding: 0.2rem 0.65rem; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .badge-CREATED { background: #dbeafe; color: #1e40af; }
+  .badge-ACTIVATED { background: #dcfce7; color: #166534; }
+  .badge-TRANSFERRED { background: #ede9fe; color: #5b21b6; }
+  .badge-PARTIALLY_REDEEMED { background: #fef3c7; color: #92400e; }
+  .badge-REDEEMED { background: #f1f5f9; color: #475569; }
+  .badge-SUSPENDED { background: #fee2e2; color: #991b1b; }
+
+  /* Card display */
+  .gc-display { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .gc-field { display: flex; flex-direction: column; gap: 0.15rem; }
+  .gc-field .label { font-size: 0.75rem; color: var(--muted); font-weight: 500; text-transform: uppercase; }
+  .gc-field .value { font-size: 0.9rem; font-weight: 500; }
+  .balance-bar-wrap { background: #e2e8f0; border-radius: 999px; height: 8px; margin-top: 0.25rem; overflow: hidden; }
+  .balance-bar { background: var(--primary); height: 100%; border-radius: 999px; transition: width 0.4s; }
+
+  /* History table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; padding: 0.5rem 0.75rem; background: var(--bg); color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  td { padding: 0.5rem 0.75rem; border-top: 1px solid var(--border); }
+  tr:hover td { background: #f8fafc; }
+
+  .hidden { display: none; }
+  .lookup-section { margin-top: 0; }
+</style>
 </head>
 <body>
+
 <header>
   <h1>Gift Card Blockchain Tracker</h1>
   <p>Hyperledger Fabric — CSE 540 Group 22</p>
 </header>
+
+<nav>
+  <button class="active" onclick="switchTab('issuer', this)">Issuer</button>
+  <button onclick="switchTab('retailer', this)">Retailer</button>
+  <button onclick="switchTab('customer', this)">Customer</button>
+  <button onclick="switchTab('admin', this)">Admin</button>
+</nav>
+
 <main>
+
+  <!-- ISSUER TAB -->
+  <div id="tab-issuer" class="tab active">
+    <div class="card">
+      <h2>Create Gift Card</h2>
+      <div class="form-row"><label>Card ID</label><input id="create-cardid" placeholder="e.g. GC001"></div>
+      <div class="form-row"><label>Issuer ID</label><input id="create-issuerid" placeholder="e.g. issuer1"></div>
+      <div class="form-row"><label>Balance ($)</label><input id="create-balance" type="number" min="0.01" step="0.01" placeholder="100.00"></div>
+      <button class="submit-btn" onclick="createCard()">Create Card</button>
+      <div id="create-alert" class="alert"></div>
+    </div>
+  </div>
+
+  <!-- RETAILER TAB -->
+  <div id="tab-retailer" class="tab">
+    <div class="card">
+      <h2>Activate Gift Card</h2>
+      <div class="form-row"><label>Card ID</label><input id="activate-cardid" placeholder="e.g. GC001"></div>
+      <button class="submit-btn" onclick="activateCard()">Activate Card</button>
+      <div id="activate-alert" class="alert"></div>
+    </div>
+    <div class="card">
+      <h2>Transfer Gift Card</h2>
+      <div class="form-row"><label>Card ID</label><input id="transfer-cardid" placeholder="e.g. GC001"></div>
+      <div class="form-row"><label>New Owner ID</label><input id="transfer-ownerid" placeholder="e.g. customer1"></div>
+      <button class="submit-btn" onclick="transferCard()">Transfer Card</button>
+      <div id="transfer-alert" class="alert"></div>
+    </div>
+  </div>
+
+  <!-- CUSTOMER TAB -->
+  <div id="tab-customer" class="tab">
+    <div class="card">
+      <h2>Redeem Gift Card</h2>
+      <div class="form-row"><label>Card ID</label><input id="redeem-cardid" placeholder="e.g. GC001"></div>
+      <div class="form-row"><label>Amount ($)</label><input id="redeem-amount" type="number" min="0.01" step="0.01" placeholder="25.00"></div>
+      <button class="submit-btn" onclick="redeemCard()">Redeem</button>
+      <div id="redeem-alert" class="alert"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN TAB -->
+  <div id="tab-admin" class="tab">
+    <div class="card">
+      <h2>Suspend Gift Card</h2>
+      <div class="form-row"><label>Card ID</label><input id="suspend-cardid" placeholder="e.g. GC001"></div>
+      <div class="form-row"><label>Reason</label><input id="suspend-reason" placeholder="e.g. Fraud suspected"></div>
+      <button class="submit-btn" onclick="suspendCard()">Suspend Card</button>
+      <div id="suspend-alert" class="alert"></div>
+    </div>
+    <div class="card">
+      <h2>Reactivate Gift Card</h2>
+      <div class="form-row"><label>Card ID</label><input id="reactivate-cardid" placeholder="e.g. GC001"></div>
+      <button class="submit-btn" onclick="reactivateCard()">Reactivate Card</button>
+      <div id="reactivate-alert" class="alert"></div>
+    </div>
+  </div>
+
+  <!-- LOOKUP SECTION (always visible) -->
+  <div class="card lookup-section">
+    <h2>Look Up Gift Card</h2>
+    <div style="display:flex;gap:0.5rem;align-items:flex-end">
+      <div class="form-row" style="flex:1;margin-bottom:0">
+        <label>Card ID</label>
+        <input id="lookup-cardid" placeholder="e.g. GC001" onkeydown="if(event.key==='Enter')lookupCard()">
+      </div>
+      <button class="submit-btn" onclick="lookupCard()">Look Up</button>
+    </div>
+    <div id="lookup-alert" class="alert"></div>
+  </div>
+
+  <!-- CARD DETAIL DISPLAY -->
+  <div id="card-detail" class="card hidden">
+    <h2 id="detail-title">Card Details</h2>
+    <div class="gc-display" id="gc-fields" style="margin-bottom:1rem"></div>
+    <div style="margin-bottom:0.5rem">
+      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted);margin-bottom:0.25rem">
+        <span>Balance</span><span id="balance-label"></span>
+      </div>
+      <div class="balance-bar-wrap"><div class="balance-bar" id="balance-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- HISTORY TABLE -->
+  <div id="history-section" class="card hidden">
+    <h2>Transaction History</h2>
+    <table>
+      <thead><tr><th>Timestamp</th><th>Event</th><th>Actor</th><th>Details</th></tr></thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+
 </main>
+
+<script>
+const API_BASE = 'http://localhost:8080';
+let currentRole = 'issuer';
+
+function switchTab(role, btn) {
+  currentRole = role;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + role).classList.add('active');
+  btn.classList.add('active');
+}
+
+async function apiFetch(method, path, body, role) {
+  const url = `${API_BASE}${path}${role ? '?role=' + role : ''}`;
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  const data = await res.json().catch(() => ({ error: res.statusText }));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function showAlert(id, msg, isError) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'alert ' + (isError ? 'error' : 'success');
+}
+
+async function createCard() {
+  const cardID = document.getElementById('create-cardid').value.trim();
+  const issuerID = document.getElementById('create-issuerid').value.trim();
+  const balance = parseFloat(document.getElementById('create-balance').value);
+  try {
+    const r = await apiFetch('POST', '/cards', { cardID, issuerID, balance }, 'issuer');
+    showAlert('create-alert', r.message || 'Card created successfully.', false);
+  } catch(e) { showAlert('create-alert', e.message, true); }
+}
+
+async function activateCard() {
+  const cardID = document.getElementById('activate-cardid').value.trim();
+  try {
+    const r = await apiFetch('POST', `/cards/${cardID}/activate`, null, 'retailer');
+    showAlert('activate-alert', r.message || 'Card activated.', false);
+  } catch(e) { showAlert('activate-alert', e.message, true); }
+}
+
+async function transferCard() {
+  const cardID = document.getElementById('transfer-cardid').value.trim();
+  const newOwnerID = document.getElementById('transfer-ownerid').value.trim();
+  try {
+    const r = await apiFetch('POST', `/cards/${cardID}/transfer`, { newOwnerID }, 'retailer');
+    showAlert('transfer-alert', r.message || 'Card transferred.', false);
+  } catch(e) { showAlert('transfer-alert', e.message, true); }
+}
+
+async function redeemCard() {
+  const cardID = document.getElementById('redeem-cardid').value.trim();
+  const amount = parseFloat(document.getElementById('redeem-amount').value);
+  try {
+    const r = await apiFetch('POST', `/cards/${cardID}/redeem`, { amount }, 'customer');
+    showAlert('redeem-alert', r.message || 'Card redeemed.', false);
+  } catch(e) { showAlert('redeem-alert', e.message, true); }
+}
+
+async function suspendCard() {
+  const cardID = document.getElementById('suspend-cardid').value.trim();
+  const reason = document.getElementById('suspend-reason').value.trim();
+  try {
+    const r = await apiFetch('POST', `/cards/${cardID}/suspend`, { reason }, 'admin');
+    showAlert('suspend-alert', r.message || 'Card suspended.', false);
+  } catch(e) { showAlert('suspend-alert', e.message, true); }
+}
+
+async function reactivateCard() {
+  const cardID = document.getElementById('reactivate-cardid').value.trim();
+  try {
+    const r = await apiFetch('POST', `/cards/${cardID}/reactivate`, null, 'admin');
+    showAlert('reactivate-alert', r.message || 'Card reactivated.', false);
+  } catch(e) { showAlert('reactivate-alert', e.message, true); }
+}
+
+async function lookupCard() {
+  const cardID = document.getElementById('lookup-cardid').value.trim();
+  if (!cardID) { showAlert('lookup-alert', 'Enter a Card ID.', true); return; }
+
+  document.getElementById('card-detail').classList.add('hidden');
+  document.getElementById('history-section').classList.add('hidden');
+  document.getElementById('lookup-alert').className = 'alert';
+
+  try {
+    const [card, events] = await Promise.all([
+      apiFetch('GET', `/cards/${cardID}`, null, currentRole),
+      apiFetch('GET', `/cards/${cardID}/history`, null, currentRole),
+    ]);
+    renderCard(card);
+    renderHistory(events);
+  } catch(e) { showAlert('lookup-alert', e.message, true); }
+}
+
+function renderCard(card) {
+  document.getElementById('detail-title').innerHTML =
+    `Card: ${card.cardId} <span class="badge badge-${card.status}">${card.status}</span>`;
+
+  const fields = [
+    ['Issuer', card.issuerId],
+    ['Owner', card.ownerId],
+    ['Created', fmtTime(card.createdAt)],
+    ['Last Updated', fmtTime(card.lastUpdatedAt)],
+    ['Issuer MSP', card.issuerMsp],
+    ['Owner MSP', card.ownerMsp],
+  ];
+  if (card.retailerId) fields.push(['Retailer', card.retailerId], ['Activated', fmtTime(card.activatedAt)]);
+
+  document.getElementById('gc-fields').innerHTML = fields.map(([l, v]) =>
+    `<div class="gc-field"><span class="label">${l}</span><span class="value">${v || '—'}</span></div>`
+  ).join('');
+
+  const pct = card.originalBalance > 0 ? (card.balance / card.originalBalance * 100).toFixed(1) : 0;
+  document.getElementById('balance-label').textContent =
+    `$${card.balance.toFixed(2)} / $${card.originalBalance.toFixed(2)} (${pct}%)`;
+  document.getElementById('balance-bar').style.width = pct + '%';
+
+  document.getElementById('card-detail').classList.remove('hidden');
+}
+
+function renderHistory(events) {
+  if (!events || events.length === 0) {
+    document.getElementById('history-body').innerHTML =
+      '<tr><td colspan="4" style="color:var(--muted);text-align:center">No events found.</td></tr>';
+  } else {
+    document.getElementById('history-body').innerHTML = events.map(e =>
+      `<tr>
+        <td>${fmtTime(e.timestamp)}</td>
+        <td><span class="badge badge-${e.eventType.replace('CARD_', '')}">${e.eventType}</span></td>
+        <td>${e.actorId} <span style="color:var(--muted);font-size:0.75rem">(${e.actorRole})</span></td>
+        <td>${e.details || '—'}</td>
+      </tr>`
+    ).join('');
+  }
+  document.getElementById('history-section').classList.remove('hidden');
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  try { return new Date(ts).toLocaleString(); } catch { return ts; }
+}
+</script>
 </body>
 </html>
