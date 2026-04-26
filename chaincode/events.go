@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/hyperledger/fabric-contract-api-go/v2/contractapi"
 )
@@ -88,6 +90,19 @@ func queryEventsByCardID(ctx contractapi.TransactionContextInterface, cardID str
 
 		events = append(events, &event)
 	}
+
+	// Sort events by timestamp
+	sort.Slice(events, func(i, j int) bool {
+		ti, err1 := time.Parse(time.RFC3339, events[i].Timestamp)
+		tj, err2 := time.Parse(time.RFC3339, events[j].Timestamp)
+		if err1 != nil || err2 != nil {
+			return events[i].Timestamp < events[j].Timestamp
+		}
+		if ti.Equal(tj) {
+			return events[i].TxID < events[j].TxID
+		}
+		return ti.After(tj)
+	})
 
 	return events, nil
 }
