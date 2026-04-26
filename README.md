@@ -21,155 +21,103 @@ Records the full lifecycle of each gift card: **creation** (issuer), **activatio
 - [Git](https://git-scm.com/)
 - [jq](https://jqlang.org/)
 - [curl](https://curl.se/)
-- Hyperledger Fabric Samples
-    ```bash
-    # Bootstrap Fabric environment (once)
-    mkdir ~/fabric-dev && cd ~/fabric-dev
-    curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/master/scripts/bootstrap.sh | bash -s
-    ```
 
-## How To Deploy (WIP)
-- **Build Go Files**
-    ```bash
-    cd chaincode
-    go mod tidy
-    go build
-    ```
-- **Start Test Network**
-    ```bash
-    cd ~/fabric-dev/fabric-samples/test-network
-    ./network.sh down # Remove anything previously generated
-    ./network.sh up
-    ./network.sh createChannel
-    ```
+## How To Deploy
 
-- **Package Smart Contract (Chaincode)**
-    ```bash
-    # Set Environment Path Variables
-    export PATH=${PWD}/../bin:$PATH
-    export FABRIC_CFG_PATH=${PWD}/../config/
+Use **two terminals** while running this project:
 
-    # Package Chaincode
-    peer lifecycle chaincode package giftCard.tar.gz \
-    --path <path/to/chaincode> \
-    --lang golang \
-    --label giftCard
-    ```
+- **Terminal 1** = Hyperledger Fabric / chaincode commands
+- **Terminal 2** = Web application / API server
 
-- **Install Chaincode Package**
-    ```bash
-    # Set Environment Variables for Org1
-    export CORE_PEER_TLS_ENABLED=true
-    export CORE_PEER_LOCALMSPID="Org1MSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
-    export CORE_PEER_ADDRESS=localhost:7051
+Before starting, make sure **Docker is running** (for example, open Docker Desktop on Mac/Windows, or ensure Docker Engine is running on Linux) because the Fabric test network depends on Docker containers.
 
-    # Install The Chaincode
-    peer lifecycle chaincode install giftCard.tar.gz
-
-    # Set Environment Variables for Org2
-    export CORE_PEER_LOCALMSPID="Org2MSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
-    export CORE_PEER_ADDRESS=localhost:9051
-
-    # Install The Chaincode
-    peer lifecycle chaincode install giftCard.tar.gz
-    ```
-
-- **Approve Chaincode Definition**
-    ```bash
-    # Run Command And Copy Package ID
-    peer lifecycle chaincode queryinstalled
-
-    # Export Package ID
-    export CC_PACKAGE_ID= # Your Copied Package ID
-
-    # Approve Chaincode Definition As Org2
-    peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name giftCard --version 1.0 --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
-
-    # Set Environment Variables To Operate As The Org1 Admin
-    export CORE_PEER_LOCALMSPID="Org1MSP"
-    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
-    export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
-    export CORE_PEER_ADDRESS=localhost:7051
-
-    # Approve Chaincode Definition As Org1
-    peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name giftCard --version 1.0 --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
-    ```
-
-- **Commit Chaincode Definition To Channel**
-    ```bash
-    # Commit Chaincode
-    peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name giftCard --version 1.0 --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
-    ```
-
-- **Invoking The Chaincode**
-    ```bash
-    # General Syntax for Invoking a Function
-    peer chaincode invoke -o localhost:7050 \
-    --ordererTLSHostnameOverride orderer.example.com \
-    --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
-    -C mychannel -n giftCard \
-    --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
-    --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
-    -c '{"function":"YourFunctionName","Args":["Arg1", "Arg2"]}'
-    ```
-
-- **Invoke Functions To Use**
-    - `InitLedger`
-    - `CreateGiftCard`
-    - `TransferGiftCard`
-    - `ActivateGiftCard`
-    - `RedeemGiftCard`
-    - `SuspendGiftCard`
-    - `ReactivateGiftCard`
-
-- **Querying The Chaincode**
-    ```bash
-    # General Syntax for Querying
-    peer chaincode query -C mychannel -n giftCard -c '{"Args":["FunctionName", "Arg1", "Arg2"]}'
-    ```
-
-- **Query Functions To Use**
-    - `GetGiftCard`
-    - `GetCurrentBalance`
-    - `GetGiftCardHistory`
-
-## Web Application
-
-The project includes a Go REST API server and a single-page browser UI that connects to the Fabric test network. Complete the chaincode deployment steps above before starting the server.
-
-### Additional Dependencies
-- Go 1.22+ (required for `net/http` path parameters)
-- No Node.js required — the frontend is pure HTML/CSS/JavaScript
-
-### Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `TEST_NETWORK_PATH` | *(required)* | Absolute path to `fabric-samples/test-network` |
-| `CHANNEL_NAME` | `mychannel` | Fabric channel name |
-| `CHAINCODE_NAME` | `giftCard` | Deployed chaincode name |
-| `PORT` | `8080` | HTTP port for the API server |
-| `FRONTEND_DIR` | auto-detected | Path to `application/frontend/` (override if needed) |
-
-### Starting the API Server
+### Terminal 1 — Fabric and Chaincode Setup
+#### 1. Clone or download this repository
 ```bash
-# Ensure the Fabric test network is running and chaincode is deployed first, then:
-export TEST_NETWORK_PATH=~/fabric-dev/fabric-samples/test-network
+git clone <repo-url>
+cd <repo-folder>
+```
+
+#### 2. Install Hyperledger Fabric samples and binaries
+
+Run:
+```bash
+curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
+./install-fabric.sh -h
+```
+
+The official Fabric install script downloads the Fabric samples, binaries, and Docker images needed to run the test network locally.
+
+#### 3. Build the chaincode
+
+From the project root:
+
+```bash
+cd chaincode
+go clean -modcache
+go mod tidy
+go build
+```
+
+Running `go mod tidy` and `go build` first helps catch dependency or compile issues before deploying to the Fabric test network.
+
+#### 4. Start the Fabric test network
+
+From the `chaincode` directory, move into the test network directory:
+
+```bash
+cd .. && cd fabric-samples/test-network
+./network.sh down
+./network.sh up createChannel -ca
+```
+
+The Fabric test network supports creating a channel with Certificate Authorities using `up createChannel -ca`, which is the setup used by this project.
+
+#### 5. Deploy the chaincode
+
+```bash
+./network.sh deployCC -ccn giftCard -ccp ../../chaincode -ccl go
+```
+
+The `deployCC` command packages, installs, approves, and commits the Go chaincode to the test network channel in one step.
+
+#### 6. Load peer environment variables (Needed for command line invoking/querying, skip if only using web UI version)
+
+```bash
+source ./scripts/envVar.sh
+setGlobals 1
+```
+This sets the peer CLI environment to use **Org1** by default for admin / issuer / retailer operations in the test network setup.
+
+### Notes
+
+- `setGlobals 1` = use **Org1MSP**
+- `setGlobals 2` = use **Org2MSP**
+- In this project, **Org1** acts as issuer / retailer / admin, and **Org2** acts as customer.
+
+### Terminal 2 — Web Application Setup
+In a second terminal, start the API server after the Fabric network and chaincode are already running.
+
+```bash
+export TEST_NETWORK_PATH=../fabric-samples/test-network
 
 cd application
 go mod tidy
 go run ./cmd/server/
 ```
 
-The server starts on `http://localhost:8080` and serves both the REST API and the frontend UI.
+This starts the web application and REST API server locally. Once it is running, open:
 
-### Opening the Frontend
+```text
+http://localhost:8080
+```
 
-Navigate to **http://localhost:8080** in your browser. The UI has four tabs:
+## How To Use
+
+### Web UI (Terminal 2)
+
+Once Web UI running and opened you can interact with it and create, activate, transfer, redeem, suspend or reactivate gift cards, thus 
+simulating and tracking the life cycle of a gift card throughout the chain. 
 
 | Tab | Role | Available Actions |
 |---|---|---|
@@ -178,30 +126,169 @@ Navigate to **http://localhost:8080** in your browser. The UI has four tabs:
 | **Customer** | Org2MSP | Redeem card |
 | **Admin** | Org1MSP | Suspend card, Reactivate card |
 
-All tabs share a **Look Up Gift Card** panel that shows the current card status, balance, and full transaction history.
+All tabs share a **Look Up Gift Card** panel that displays card details, balance, and transaction history.
 
-### REST API Endpoints
+### REST API Examples
 
-| Method | Path | Role param | Description |
-|---|---|---|---|
-| `POST` | `/cards` | `issuer` | Create a gift card |
-| `POST` | `/cards/{id}/activate` | `retailer` | Activate a card |
-| `POST` | `/cards/{id}/transfer` | `retailer` | Transfer card to new owner |
-| `POST` | `/cards/{id}/redeem` | `customer` | Redeem an amount from card |
-| `POST` | `/cards/{id}/suspend` | `admin` | Suspend a card |
-| `POST` | `/cards/{id}/reactivate` | `admin` | Reactivate a suspended card |
-| `GET` | `/cards/{id}` | any | Get card details |
-| `GET` | `/cards/{id}/balance` | any | Get current balance |
-| `GET` | `/cards/{id}/history` | any | Get event history |
+#### Create a card
 
-**Example — create a card:**
 ```bash
 curl -X POST http://localhost:8080/cards?role=issuer \
   -H 'Content-Type: application/json' \
   -d '{"cardID":"GC001","issuerID":"issuer1","balance":100}'
 ```
 
-**Example — look up a card:**
+#### Get card details
+
 ```bash
 curl http://localhost:8080/cards/GC001?role=issuer
+```
+
+#### Get card balance
+
+```bash
+curl http://localhost:8080/cards/GC001/balance?role=customer
+```
+
+#### Get card history
+
+```bash
+curl http://localhost:8080/cards/GC001/history?role=customer
+```
+
+### Direct Chaincode Commands (Terminal 1)
+
+After deployment, keep **Terminal 1** open in:
+
+```bash
+fabric-samples/test-network
+```
+
+and make sure you already ran:
+
+```bash
+source ./scripts/envVar.sh
+```
+
+#### Use Org1 for issuer / retailer / admin actions
+
+```bash
+setGlobals 1
+```
+
+#### Create a gift card
+
+```bash
+peer chaincode invoke -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+  -C mychannel -n giftCard \
+  --peerAddresses localhost:7051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+  -c '{"function":"CreateGiftCard","Args":["card1","issuer1","100"]}'
+```
+
+#### Activate a gift card
+
+```bash
+peer chaincode invoke -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+  -C mychannel -n giftCard \
+  --peerAddresses localhost:7051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+  -c '{"function":"ActivateGiftCard","Args":["card1"]}'
+```
+
+#### Transfer a gift card to customer ownership
+
+```bash
+peer chaincode invoke -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+  -C mychannel -n giftCard \
+  --peerAddresses localhost:7051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+  -c '{"function":"TransferGiftCard","Args":["card1","customer1"]}'
+```
+
+#### Switch to Org2 for customer actions
+
+```bash
+setGlobals 2
+```
+
+#### Redeem part of the balance
+
+```bash
+peer chaincode invoke -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+  -C mychannel -n giftCard \
+  --peerAddresses localhost:7051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+  -c '{"function":"RedeemGiftCard","Args":["card1","25"]}'
+```
+
+#### Query card details
+
+```bash
+peer chaincode query -C mychannel -n giftCard \
+  -c '{"function":"GetGiftCard","Args":["card1"]}'
+```
+
+#### Query current balance
+
+```bash
+peer chaincode query -C mychannel -n giftCard \
+  -c '{"function":"GetCurrentBalance","Args":["card1"]}'
+```
+
+#### Query event history
+
+```bash
+peer chaincode query -C mychannel -n giftCard \
+  -c '{"function":"GetGiftCardHistory","Args":["card1"]}'
+```
+
+#### Switch back to Org1 for admin actions
+
+```bash
+setGlobals 1
+```
+
+#### Suspend a card
+
+```bash
+peer chaincode invoke -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+  -C mychannel -n giftCard \
+  --peerAddresses localhost:7051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+  -c '{"function":"SuspendGiftCard","Args":["card1","suspicious activity"]}'
+```
+
+#### Reactivate a card
+
+```bash
+peer chaincode invoke -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+  -C mychannel -n giftCard \
+  --peerAddresses localhost:7051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+  -c '{"function":"ReactivateGiftCard","Args":["card1"]}'
 ```
