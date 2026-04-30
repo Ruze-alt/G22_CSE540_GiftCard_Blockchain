@@ -18,7 +18,7 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
   header { background: var(--primary); color: white; padding: 1rem 2rem; }
   header h1 { font-size: 1.25rem; font-weight: 700; }
@@ -59,17 +59,22 @@
   button.submit-btn:hover { background: var(--primary-hover); }
   button.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-  .alert {
-    padding: 0.65rem 0.9rem; border-radius: var(--radius); font-size: 0.85rem; margin-top: 0.5rem;
-    display: none;
+    .alert {
+      padding: 0.65rem 0.9rem; border-radius: var(--radius); font-size: 0.85rem; margin-top: 0.5rem;
+      display: none;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      white-space: normal;
+      line-height: 1.4;
   }
   .alert.success { background: #dcfce7; color: #166534; display: block; }
   .alert.error { background: #fee2e2; color: #991b1b; display: block; }
 
-  /* Status badges */
   .badge {
     display: inline-block; padding: 0.2rem 0.65rem; border-radius: 999px;
     font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    white-space: nowrap;
   }
   .badge-CREATED { background: #dbeafe; color: #1e40af; }
   .badge-ACTIVATED { background: #dcfce7; color: #166534; }
@@ -79,18 +84,66 @@
   .badge-SUSPENDED { background: #fee2e2; color: #991b1b; }
   .badge-REACTIVATED { background: #d1fae5; color: #065f46; }
   
-  /* Card display */
-  .gc-display { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-  .gc-field { display: flex; flex-direction: column; gap: 0.15rem; }
+  .gc-display { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; min-width: 0; }
+  .gc-field { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
   .gc-field .label { font-size: 0.75rem; color: var(--muted); font-weight: 500; text-transform: uppercase; }
-  .gc-field .value { font-size: 0.9rem; font-weight: 500; }
+  .gc-field .value { font-size: 0.9rem; font-weight: 500; min-width: 0; }
+
+  .id-text,
+  .detail-text {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+
+  #detail-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .balance-bar-wrap { background: #e2e8f0; border-radius: 999px; height: 8px; margin-top: 0.25rem; overflow: hidden; }
   .balance-bar { background: var(--primary); height: 100%; border-radius: 999px; transition: width 0.4s; }
 
   /* History table */
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th { text-align: left; padding: 0.5rem 0.75rem; background: var(--bg); color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
-  td { padding: 0.5rem 0.75rem; border-top: 1px solid var(--border); }
+  #history-section {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    table-layout: fixed;
+  }
+
+  th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  td {
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  th:nth-child(1), td:nth-child(1) { width: 20%; }
+  th:nth-child(2), td:nth-child(2) { width: 22%; }
+  th:nth-child(3), td:nth-child(3) { width: 28%; }
+  th:nth-child(4), td:nth-child(4) { width: 30%; }
+
   tr:hover td { background: #f8fafc; }
 
   .hidden { display: none; }
@@ -113,7 +166,7 @@
 
 <main>
 
-  <!-- ISSUER TAB -->
+  <!-- issuer -->
   <div id="tab-issuer" class="tab active">
     <div class="card">
       <h2>Create Gift Card</h2>
@@ -125,7 +178,7 @@
     </div>
   </div>
 
-  <!-- RETAILER TAB -->
+  <!-- retailer -->
   <div id="tab-retailer" class="tab">
     <div class="card">
       <h2>Activate Gift Card</h2>
@@ -142,7 +195,7 @@
     </div>
   </div>
 
-  <!-- CUSTOMER TAB -->
+  <!-- customer -->
   <div id="tab-customer" class="tab">
     <div class="card">
       <h2>Redeem Gift Card</h2>
@@ -153,7 +206,7 @@
     </div>
   </div>
 
-  <!-- ADMIN TAB -->
+  <!-- admin -->
   <div id="tab-admin" class="tab">
     <div class="card">
       <h2>Suspend Gift Card</h2>
@@ -170,7 +223,7 @@
     </div>
   </div>
 
-  <!-- LOOKUP SECTION (always visible) -->
+  <!-- card lookup -->
   <div class="card lookup-section">
     <h2>Look Up Gift Card</h2>
     <div style="display:flex;gap:0.5rem;align-items:flex-end">
@@ -183,7 +236,7 @@
     <div id="lookup-alert" class="alert"></div>
   </div>
 
-  <!-- CARD DETAIL DISPLAY -->
+  <!-- card detail -->
   <div id="card-detail" class="card hidden">
     <h2 id="detail-title">Card Details</h2>
     <div class="gc-display" id="gc-fields" style="margin-bottom:1rem"></div>
@@ -195,7 +248,7 @@
     </div>
   </div>
 
-  <!-- HISTORY TABLE -->
+  <!-- history  -->
   <div id="history-section" class="card hidden">
     <h2>Transaction History</h2>
     <table>
@@ -230,8 +283,15 @@ async function apiFetch(method, path, body, role) {
 
 function showAlert(id, msg, isError) {
   const el = document.getElementById(id);
-  el.textContent = msg;
+  el.textContent = cleanMessage(msg);
   el.className = 'alert ' + (isError ? 'error' : 'success');
+}
+
+function cleanMessage(msg) {
+  if (!msg) return 'Something went wrong.';
+
+  return String(msg)
+    .replace(/[A-Za-z0-9+/=:_-]{40,}/g, match => shortId(match, 12, 8));
 }
 
 async function createCard() {
@@ -247,7 +307,7 @@ async function createCard() {
 async function activateCard() {
   const cardID = document.getElementById('activate-cardid').value.trim();
   try {
-    const r = await apiFetch('POST', `/cards/${cardID}/activate`, null, 'retailer');
+    const r = await apiFetch('POST', `/cards/${encodeURIComponent(cardID)}/activate`, null, 'retailer');
     showAlert('activate-alert', r.message || 'Card activated.', false);
   } catch(e) { showAlert('activate-alert', e.message, true); }
 }
@@ -256,7 +316,7 @@ async function transferCard() {
   const cardID = document.getElementById('transfer-cardid').value.trim();
   const newOwnerID = document.getElementById('transfer-ownerid').value.trim();
   try {
-    const r = await apiFetch('POST', `/cards/${cardID}/transfer`, { newOwnerID }, 'retailer');
+    const r = await apiFetch('POST', `/cards/${encodeURIComponent(cardID)}/transfer`, { newOwnerID }, 'retailer');
     showAlert('transfer-alert', r.message || 'Card transferred.', false);
   } catch(e) { showAlert('transfer-alert', e.message, true); }
 }
@@ -265,7 +325,7 @@ async function redeemCard() {
   const cardID = document.getElementById('redeem-cardid').value.trim();
   const amount = parseFloat(document.getElementById('redeem-amount').value);
   try {
-    const r = await apiFetch('POST', `/cards/${cardID}/redeem`, { amount }, 'customer');
+    const r = await apiFetch('POST', `/cards/${encodeURIComponent(cardID)}/redeem`, { amount }, 'customer');
     showAlert('redeem-alert', r.message || 'Card redeemed.', false);
   } catch(e) { showAlert('redeem-alert', e.message, true); }
 }
@@ -274,7 +334,7 @@ async function suspendCard() {
   const cardID = document.getElementById('suspend-cardid').value.trim();
   const reason = document.getElementById('suspend-reason').value.trim();
   try {
-    const r = await apiFetch('POST', `/cards/${cardID}/suspend`, { reason }, 'admin');
+    const r = await apiFetch('POST', `/cards/${encodeURIComponent(cardID)}/suspend`, { reason }, 'admin');
     showAlert('suspend-alert', r.message || 'Card suspended.', false);
   } catch(e) { showAlert('suspend-alert', e.message, true); }
 }
@@ -282,7 +342,7 @@ async function suspendCard() {
 async function reactivateCard() {
   const cardID = document.getElementById('reactivate-cardid').value.trim();
   try {
-    const r = await apiFetch('POST', `/cards/${cardID}/reactivate`, null, 'admin');
+    const r = await apiFetch('POST', `/cards/${encodeURIComponent(cardID)}/reactivate`, null, 'admin');
     showAlert('reactivate-alert', r.message || 'Card reactivated.', false);
   } catch(e) { showAlert('reactivate-alert', e.message, true); }
 }
@@ -297,8 +357,8 @@ async function lookupCard() {
 
   try {
     const [card, events] = await Promise.all([
-      apiFetch('GET', `/cards/${cardID}`, null, currentRole),
-      apiFetch('GET', `/cards/${cardID}/history`, null, currentRole),
+      apiFetch('GET', `/cards/${encodeURIComponent(cardID)}`, null, currentRole),
+      apiFetch('GET', `/cards/${encodeURIComponent(cardID)}/history`, null, currentRole),
     ]);
     renderCard(card);
     renderHistory(events);
@@ -307,25 +367,34 @@ async function lookupCard() {
 
 function renderCard(card) {
   document.getElementById('detail-title').innerHTML =
-    `Card: ${card.cardId} <span class="badge badge-${card.status}">${card.status}</span>`;
+    `Card: ${idSpan(card.cardId)} <span class="badge badge-${escapeAttr(card.status)}">${escapeHTML(card.status)}</span>`;
 
   const fields = [
-    ['Issuer', card.issuerId],
-    ['Owner', card.ownerId],
-    ['Created', fmtTime(card.createdAt)],
-    ['Last Updated', fmtTime(card.lastUpdatedAt)],
-    ['Issuer MSP', card.issuerMsp],
-    ['Owner MSP', card.ownerMsp],
+    ['Issuer', card.issuerId, true],
+    ['Owner', card.ownerId, true],
+    ['Created', fmtTime(card.createdAt), false],
+    ['Last Updated', fmtTime(card.lastUpdatedAt), false],
+    ['Issuer MSP', card.issuerMsp, true],
+    ['Owner MSP', card.ownerMsp, true],
   ];
-  if (card.retailerId) fields.push(['Retailer', card.retailerId], ['Activated', fmtTime(card.activatedAt)]);
 
-  document.getElementById('gc-fields').innerHTML = fields.map(([l, v]) =>
-    `<div class="gc-field"><span class="label">${l}</span><span class="value">${v || '—'}</span></div>`
+  if (card.retailerId) {
+    fields.push(['Retailer', card.retailerId, true], ['Activated', fmtTime(card.activatedAt), false]);
+  }
+
+  document.getElementById('gc-fields').innerHTML = fields.map(([label, value, isId]) =>
+    `<div class="gc-field">
+      <span class="label">${escapeHTML(label)}</span>
+      <span class="value">${isId ? idSpan(value) : escapeHTML(value || '—')}</span>
+    </div>`
   ).join('');
 
-  const pct = card.originalBalance > 0 ? (card.balance / card.originalBalance * 100).toFixed(1) : 0;
+  const balance = Number(card.balance || 0);
+  const originalBalance = Number(card.originalBalance || 0);
+  const pct = originalBalance > 0 ? (balance / originalBalance * 100).toFixed(1) : 0;
+
   document.getElementById('balance-label').textContent =
-    `$${card.balance.toFixed(2)} / $${card.originalBalance.toFixed(2)} (${pct}%)`;
+    `$${balance.toFixed(2)} / $${originalBalance.toFixed(2)} (${pct}%)`;
   document.getElementById('balance-bar').style.width = pct + '%';
 
   document.getElementById('card-detail').classList.remove('hidden');
@@ -336,14 +405,24 @@ function renderHistory(events) {
     document.getElementById('history-body').innerHTML =
       '<tr><td colspan="4" style="color:var(--muted);text-align:center">No events found.</td></tr>';
   } else {
-    document.getElementById('history-body').innerHTML = events.map(e =>
-      `<tr>
-        <td>${fmtTime(e.timestamp)}</td>
-        <td><span class="badge badge-${e.eventType.replace('CARD_', '')}">${e.eventType}</span></td>
-        <td>${e.actorId} <span style="color:var(--muted);font-size:0.75rem">(${e.actorRole})</span></td>
-        <td>${e.details || '—'}</td>
-      </tr>`
-    ).join('');
+    document.getElementById('history-body').innerHTML = events.map(e => {
+      const eventType = e.eventType || '—';
+      const badgeClass = eventType.replace('CARD_', '');
+
+      return `<tr>
+        <td title="${escapeAttr(fmtTime(e.timestamp))}">${escapeHTML(fmtTime(e.timestamp))}</td>
+        <td title="${escapeAttr(eventType)}">
+          <span class="badge badge-${escapeAttr(badgeClass)}">${escapeHTML(eventType)}</span>
+        </td>
+        <td title="${escapeAttr(e.actorId || '')}">
+          ${idSpan(e.actorId)}
+          <span style="color:var(--muted);font-size:0.75rem">(${escapeHTML(e.actorRole || '—')})</span>
+        </td>
+        <td title="${escapeAttr(e.details || '')}">
+          <span class="detail-text">${shortId(e.details, 12, 8)}</span>
+        </td>
+      </tr>`;
+    }).join('');
   }
   document.getElementById('history-section').classList.remove('hidden');
 }
@@ -351,6 +430,33 @@ function renderHistory(events) {
 function fmtTime(ts) {
   if (!ts) return '—';
   try { return new Date(ts).toLocaleString(); } catch { return ts; }
+}
+
+function shortId(id, start = 8, end = 6) {
+  if (!id) return '—';
+  const str = String(id);
+  if (str.length <= start + end + 3) return str;
+  return `${str.slice(0, start)}...${str.slice(-end)}`;
+}
+
+function idSpan(id, start = 8, end = 6) {
+  if (!id) return '—';
+  const full = String(id);
+  const shortened = shortId(full, start, end);
+  return `<span class="id-text" title="${escapeAttr(full)}">${escapeHTML(shortened)}</span>`;
+}
+
+function escapeHTML(value) {
+  return String(value ?? '—')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function escapeAttr(value) {
+  return escapeHTML(value);
 }
 </script>
 </body>
